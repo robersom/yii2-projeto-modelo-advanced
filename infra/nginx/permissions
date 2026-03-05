@@ -1,0 +1,2 @@
+chmod -R 777 frontend/runtime backend/runtime
+chmod -R 777 frontend/web/assets backend/web/assets
