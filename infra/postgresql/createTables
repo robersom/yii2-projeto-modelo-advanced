@@ -1,0 +1,105 @@
+-- Adminer 5.4.2 PostgreSQL 15.13 dump
+
+CREATE TABLE "auth_assignment" (
+    "item_name" character varying(64) NOT NULL,
+    "user_id" character varying(64) NOT NULL,
+    "created_at" integer,
+    CONSTRAINT "auth_assignment_pkey" PRIMARY KEY ("item_name", "user_id")
+)
+WITH (oids = false);
+
+CREATE INDEX "idx-auth_assignment-user_id" ON projeto.auth_assignment USING btree (user_id);
+
+INSERT INTO "auth_assignment" ("item_name", "user_id", "created_at") VALUES
+('superAdmin',	'1',	1772651493);
+
+CREATE TABLE "auth_item" (
+    "name" character varying(64) NOT NULL,
+    "type" smallint NOT NULL,
+    "description" text,
+    "rule_name" character varying(64),
+    "data" bytea,
+    "created_at" integer,
+    "updated_at" integer,
+    CONSTRAINT "auth_item_pkey" PRIMARY KEY ("name")
+)
+WITH (oids = false);
+
+CREATE INDEX "idx-auth_item-type" ON projeto.auth_item USING btree (type);
+
+INSERT INTO "auth_item" ("name", "type", "description", "rule_name", "data", "created_at", "updated_at") VALUES
+('accessBackend',	2,	'Permissão para acessar o painel administrativo',	NULL,	NULL,	1772488814,	1772488814),
+('admin',	1,	'Administrador do sistema',	NULL,	NULL,	1772488814,	1772635708),
+('superUser',	2,	'Acessa todas as páginas',	NULL,	NULL,	1772640534,	1772640534),
+('/*',	2,	NULL,	NULL,	NULL,	1772640612,	1772640612),
+('superAdmin',	1,	'Acesso a todo o sistema',	NULL,	NULL,	1772640650,	1772640650),
+('updateOwnPost',	2,	'Permite atualizar somente o próprio post',	'isAuthor',	NULL,	1772671616,	1772671728),
+('cliente.update',	2,	'Exemplo de Permission',	'isCompanyClient',	NULL,	1772719262,	1772719262);
+
+CREATE TABLE "auth_item_child" (
+    "parent" character varying(64) NOT NULL,
+    "child" character varying(64) NOT NULL,
+    CONSTRAINT "auth_item_child_pkey" PRIMARY KEY ("parent", "child")
+)
+WITH (oids = false);
+
+INSERT INTO "auth_item_child" ("parent", "child") VALUES
+('admin',	'accessBackend'),
+('superUser',	'/*'),
+('superAdmin',	'superUser'),
+('superAdmin',	'accessBackend');
+
+CREATE TABLE "auth_rule" (
+    "name" character varying(64) NOT NULL,
+    "data" bytea,
+    "created_at" integer,
+    "updated_at" integer,
+    CONSTRAINT "auth_rule_pkey" PRIMARY KEY ("name")
+)
+WITH (oids = false);
+
+INSERT INTO "auth_rule" ("name", "data", "created_at", "updated_at") VALUES
+('isAuthor',	 E'\\x4f3a32323a22636f6d6d6f6e5c726261635c417574686f7252756c65223a333a7b733a343a226e616d65223b733a383a226973417574686f72223b733a393a22637265617465644174223b693a313737323637313535363b733a393a22757064617465644174223b693a313737323637313535363b7d',	1772671556,	1772671556),
+('isCompanyClient',	 E'\\x4f3a32333a22636f6d6d6f6e5c726261635c436f6d70616e7952756c65223a333a7b733a343a226e616d65223b733a31353a226973436f6d70616e79436c69656e74223b733a393a22637265617465644174223b693a313737323731383636373b733a393a22757064617465644174223b693a313737323731383636373b7d',	1772718667,	1772718667);
+
+CREATE TABLE "migration" (
+    "version" character varying(180) NOT NULL,
+    "apply_time" integer,
+    CONSTRAINT "migration_pkey" PRIMARY KEY ("version")
+)
+WITH (oids = false);
+
+
+CREATE SEQUENCE user_id_seq INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 START 2 CACHE 1;
+
+CREATE TABLE "user" (
+    "id" integer DEFAULT nextval('user_id_seq') NOT NULL,
+    "username" character varying(255) NOT NULL,
+    "auth_key" character varying(32) NOT NULL,
+    "password_hash" character varying(255) NOT NULL,
+    "password_reset_token" character varying(255),
+    "email" character varying(255) NOT NULL,
+    "status" smallint DEFAULT '10' NOT NULL,
+    "created_at" integer NOT NULL,
+    "updated_at" integer NOT NULL,
+    "verification_token" character varying(255),
+    "uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+)
+WITH (oids = false);
+
+CREATE UNIQUE INDEX user_username_key ON projeto."user" USING btree (username);
+
+CREATE UNIQUE INDEX user_password_reset_token_key ON projeto."user" USING btree (password_reset_token);
+
+CREATE UNIQUE INDEX user_email_key ON projeto."user" USING btree (email);
+
+
+ALTER TABLE ONLY "auth_assignment" ADD CONSTRAINT "auth_assignment_item_name_fkey" FOREIGN KEY (item_name) REFERENCES auth_item(name) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "auth_item" ADD CONSTRAINT "auth_item_rule_name_fkey" FOREIGN KEY (rule_name) REFERENCES auth_rule(name) ON UPDATE CASCADE ON DELETE SET NULL;
+
+ALTER TABLE ONLY "auth_item_child" ADD CONSTRAINT "auth_item_child_child_fkey" FOREIGN KEY (child) REFERENCES auth_item(name) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ONLY "auth_item_child" ADD CONSTRAINT "auth_item_child_parent_fkey" FOREIGN KEY (parent) REFERENCES auth_item(name) ON UPDATE CASCADE ON DELETE CASCADE;
+
+-- 2026-03-05 15:20:59 UTC
